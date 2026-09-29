@@ -1,5 +1,9 @@
 #define _GNU_SOURCE
 #include "Limelight-internal.h"
+
+#if defined(__APPLE__)
+#include <pthread/qos.h>
+#endif
 #if defined(__vita__)
 #include <pthread.h>
 #include <psp2/kernel/processmgr.h>
@@ -87,6 +91,15 @@ void* ThreadProc(void* context) {
     pthread_setname_np(pthread_self(), ctx->name);
 #elif defined(LC_DARWIN)
     pthread_setname_np(ctx->name);
+
+    // Threads on the per-frame and per-input path get the highest QoS class so they are not
+    // scheduled late while the device is busy (e.g. rendering on visionOS). Housekeeping
+    // threads keep the default.
+    if (strcmp(ctx->name, "VideoRecv") == 0 || strcmp(ctx->name, "VideoDec") == 0 ||
+            strcmp(ctx->name, "InputSend") == 0 || strcmp(ctx->name, "AudioRecv") == 0 ||
+            strcmp(ctx->name, "ControlRecv") == 0) {
+        pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0);
+    }
 #endif
 
     ctx->entry(ctx->context);
