@@ -456,8 +456,11 @@ static PSDP_OPTION getAttributesList(char*urlSafeAddr) {
         }
 
         if (AppVersionQuad[0] >= 7) {
-            // Enable HDR if requested
-            if (NegotiatedVideoFormat & VIDEO_FORMAT_MASK_10BIT) {
+            // Enable HDR if requested. PyroWave has no 10-bit profile of its own: a PyroWave client
+            // that also offers a 10-bit format is asking for an HDR10 PyroWave stream.
+            if ((NegotiatedVideoFormat & VIDEO_FORMAT_MASK_10BIT) ||
+                    ((NegotiatedVideoFormat & VIDEO_FORMAT_MASK_PYROWAVE) &&
+                     (StreamConfig.supportedVideoFormats & VIDEO_FORMAT_MASK_10BIT))) {
                 err |= addAttributeString(&optionHead, "x-nv-video[0].dynamicRangeMode", "1");
             }
             else {
